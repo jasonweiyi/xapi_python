@@ -64,7 +64,7 @@ class XApi(AbstractXApi):
             func.restype = c_char_p
             func.argtypes = [c_void_p]
             ptr = func(self.p_fun)
-            return ptr.value
+            return ptr
 
     def get_api_name(self):
         self.invoke_log('on_invoke_get_api_name')
