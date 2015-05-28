@@ -3,6 +3,7 @@ from _ctypes import Structure
 from datetime import datetime
 import sys
 from base.callbacks import CallBacks
+from base.comm import get_depth_market_data, get_all_bids, get_all_asks
 
 __author__ = 'Chunyou<snowtigersoft@126.com>'
 
@@ -24,7 +25,7 @@ class Logger(CallBacks):
             # The following are callbacks.
             "market_connected",
             "market_rsp_error",
-            "market_rtn_depth_market_data",
+            "market_rtn_depth_market_data_n",
             "trading_connected",
             "trading_rsp_error",
             "trading_rsp_qry_depth_market_data",
@@ -63,23 +64,32 @@ class Logger(CallBacks):
         # datetime object. Mainly used for adapting time zone time information.
         self.datetime_adapter = None
 
+    def _format(self, k, v):
+        if isinstance(v, Structure):
+            result = {}
+            for k1, _ in v._fields_:
+                result[k1] = getattr(v, k1).decode('gbk') if k1 in self.gbk_decode_key else (ord(getattr(v, k1)) if k1 in self.ord_decode_key else getattr(v, k1))
+        elif 'ctypes' in str(type(v)) or 'c_char_Array_' in str(type(v)):
+            result = v.value
+        elif k == 'status':
+            result = ord(v)
+        else:
+            result = v
+        return result
+
     def _do_log(self, content, data_kind=None):
         data_kind = data_kind if data_kind else sys._getframe(1).f_code.co_name[3:]
         if data_kind in self.data_kinds:
             for k, v in content.iteritems():
-                if isinstance(v, Structure):
-                    content[k] = {}
-                    for k1, _ in v._fields_:
-                        content[k][k1] = getattr(v, k1).decode('gbk') if k1 in self.gbk_decode_key else (ord(getattr(v, k1)) if k1 in self.ord_decode_key else getattr(v, k1))
-                elif 'ctypes' in str(type(v)) or 'c_char_Array_' in str(type(v)):
-                    content[k] = v.value
-                elif k == 'status':
-                    content[k] = ord(v)
+                if isinstance(v, list):
+                    content[k] = [self._format(k, vv) for vv in v]
+                else:
+                    content[k] = self._format(k, v)
 
             now = datetime.now()
             if self.datetime_adapter is not None:
                 now = self.datetime_adapter(now)
-            if data_kind in ['market_rtn_depth_market_data']:
+            if data_kind in ['market_rtn_depth_market_data_n']:
                 self.market_data.append([now, data_kind, content])
             else:
                 self.trading_data.append([now, data_kind, content])
@@ -121,16 +131,21 @@ class Logger(CallBacks):
             "b_is_last": b_is_last
         })
 
-    def on_market_rtn_depth_market_data(self, p_api, depth_market_data):
+    def on_market_rtn_depth_market_data_n(self, p_api, p_depth_market_data_n):
         """
         callback on market server when receive market data
         :param p_api:  c_void_p
-        :param depth_market_data: DepthMarketDataField
+        :param p_depth_market_data_n: DepthMarketDataNField
         :return:
         """
+        depth_market_data = get_depth_market_data(p_depth_market_data_n)
+        bids = get_all_bids(p_depth_market_data_n)
+        asks = get_all_asks(p_depth_market_data_n)
         self._do_log({
             "p_api": p_api,
-            "depth_market_data": depth_market_data
+            "depth_market_data": depth_market_data,
+            "bids": bids,
+            "asks": asks
         })
 
     def on_trading_connected(self, p_api, rsp_user_login, status):

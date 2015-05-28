@@ -34,11 +34,11 @@ class CallBacks:
         """
         pass
 
-    def on_market_rtn_depth_market_data(self, p_api, depth_market_data):
+    def on_market_rtn_depth_market_data_n(self, p_api, p_depth_market_data_n):
         """
         callback on market server when receive market data
         :param p_api:  c_void_p
-        :param depth_market_data: DepthMarketDataField
+        :param p_depth_market_data_n: DepthMarketDataNField
         :return:
         """
         pass

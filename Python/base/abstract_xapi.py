@@ -183,9 +183,8 @@ class AbstractXApi(object):
         elif self._callbacks:
             for callback in self._callbacks:
                 if response_type == OnRtnDepthMarketData.value:
-                    obj = cast(ptr1, POINTER(DepthMarketDataField)).contents
                     if self._is_market:
-                        callback.on_market_rtn_depth_market_data(p_api2, obj)
+                        callback.on_market_rtn_depth_market_data_n(p_api2, ptr1)
                 elif response_type == OnRspQryInstrument.value:
                     obj = cast(ptr1, POINTER(InstrumentField)).contents
                     callback.on_trading_rsp_qry_instrument(p_api2, obj, bool(double1))

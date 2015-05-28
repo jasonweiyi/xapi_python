@@ -156,6 +156,8 @@ BarSizeType是一个BarSize类型
 """
 BarSizeType = c_long
 
+SizeType = c_int
+
 """
 连接状态枚举
 """
@@ -579,91 +581,63 @@ class RspUserLoginField(Structure):
     ]
 
 
-# 深度行情
-class DepthMarketDataField(Structure):
+# 深度行情N档
+class DepthMarketDataNField(Structure):
     _fields_ = [
+        # 占用总字节大小
+        ("Size", SizeType),
         # 交易所时间
+        # 交易日，用于给数据接收器划分到同一文件使用，基本没啥别的用处
         ("TradingDay", DateIntType),
-        #  交易日，用于给数据接收器划分到同一文件使用，基本没啥别的用处
         ("ActionDay", DateIntType),
         ("UpdateTime", TimeIntType),
         ("UpdateMillisec", TimeIntType),
-        # 最新价
-        ("LastPrice", PriceType),
-        # 数量
-        ("Volume", LargeVolumeType),
-        # 成交金额
-        ("Turnover", MoneyType),
-        # 持仓量
-        ("OpenInterest", LargeVolumeType),
-        # 当日均价
-        ("AveragePrice", PriceType),
-        # 今开盘
-        ("OpenPrice", PriceType),
-        # 最高价
-        ("HighestPrice", PriceType),
-        # 最低价
-        ("LowestPrice", PriceType),
-        # 今收盘
-        ("ClosePrice", PriceType),
-        # 本次结算价
-        ("SettlementPrice", PriceType),
-        # 涨停板价
-        ("UpperLimitPrice", PriceType),
-        # 跌停板价
-        ("LowerLimitPrice", PriceType),
-        # 昨收盘
-        ("PreClosePrice", PriceType),
-        # 上次结算价
-        ("PreSettlementPrice", PriceType),
-        # 昨持仓量
-        ("PreOpenInterest", LargeVolumeType),
-        # 申买价一
-        ("BidPrice1", PriceType),
-        # 申买量一
-        ("BidVolume1", VolumeType),
-        # 申卖价一
-        ("AskPrice1", PriceType),
-        # 申卖量一
-        ("AskVolume1", VolumeType),
-        # 申买价二
-        ("BidPrice2", PriceType),
-        # 申买量二
-        ("BidVolume2", VolumeType),
-        # 申卖价二
-        ("AskPrice2", PriceType),
-        # 申卖量二
-        ("AskVolume2", VolumeType),
-        # 申买价三
-        ("BidPrice3", PriceType),
-        # 申买量三
-        ("BidVolume3", VolumeType),
-        # 申卖价三
-        ("AskPrice3", PriceType),
-        # 申卖量三
-        ("AskVolume3", VolumeType),
-        # 申买价四
-        ("BidPrice4", PriceType),
-        # 申买量四
-        ("BidVolume4", VolumeType),
-        # 申卖价四
-        ("AskPrice4", PriceType),
-        # 申卖量四
-        ("AskVolume4", VolumeType),
-        # 申买价五
-        ("BidPrice5", PriceType),
-        # 申买量五
-        ("BidVolume5", VolumeType),
-        # 申卖价五
-        ("AskPrice5", PriceType),
-        # 申卖量五
-        ("AskVolume5", VolumeType),
         # 交易所代码
         ("Exchange", ExchangeType),
-        # 唯一符号
+        #唯一符号
         ("Symbol", SymbolType),
-        # 合约代码
+        #合约代码
         ("InstrumentID", InstrumentIDType),
+        #最新价
+        ("LastPrice", PriceType),
+        #数量
+        ("Volume", LargeVolumeType),
+        #成交金额
+        ("Turnover", MoneyType),
+        #持仓量
+        ("OpenInterest", LargeVolumeType),
+        #当日均价
+        ("AveragePrice", PriceType),
+        #今开盘
+        ("OpenPrice", PriceType),
+        #最高价
+        ("HighestPrice", PriceType),
+        #最低价
+        ("LowestPrice", PriceType),
+        #今收盘
+        ("ClosePrice", PriceType),
+        #本次结算价
+        ("SettlementPrice", PriceType),
+        #涨停板价
+        ("UpperLimitPrice", PriceType),
+        #跌停板价
+        ("LowerLimitPrice", PriceType),
+        #昨收盘
+        ("PreClosePrice", PriceType),
+        #上次结算价
+        ("PreSettlementPrice", PriceType),
+        #昨持仓量
+        ("PreOpenInterest", LargeVolumeType),
+        #买档个数
+        ("BidCount", SizeType)
+    ]
+
+
+class DepthField(Structure):
+    _fields_ = [
+        ("Price", PriceType),
+        ("Size", VolumeType),
+        ("Count", VolumeType)
     ]
 
 
@@ -749,6 +723,8 @@ class InstrumentField(Structure):
         ("InstrumentID", InstrumentIDType),
         # 交易所代码
         ("ExchangeID", ExchangeIDType),
+        # 产品代码
+        ("ProductID", InstrumentIDType),
         # 合约名称
         ("InstrumentName", InstrumentNameType),
         # 基础商品代码
@@ -941,3 +917,94 @@ OnFilterSubscribe = ResponeType(chr(78))
 # function
 fnOnRespone = WINFUNCTYPE(None, c_char, c_void_p, c_void_p, c_double, c_double, c_void_p, c_int, c_void_p, c_int,
                           c_void_p, c_int)
+
+
+def get_depth_market_data(p_market_data):
+    """
+    指针转换为行情数据
+    :param p_market_data:
+    :return:
+    """
+    market_data = cast(p_market_data, POINTER(DepthMarketDataNField)).contents
+    return market_data
+
+
+def get_bid_count(p_market_data):
+    """
+    Bid Count
+    :param p_market_data:
+    :return:
+    """
+    market_data = get_depth_market_data(p_market_data)
+    return market_data.BidCount
+
+
+def get_ask_count(p_market_data):
+    """
+    Ask Count
+    :param p_market_data:
+    :return:
+    """
+    market_data = get_depth_market_data(p_market_data)
+    size = market_data.Size
+    bid_count = market_data.BidCount
+    count = (size - sizeof(DepthMarketDataNField)) / sizeof(DepthField)
+    return count - bid_count
+
+
+def get_bid(p_market_data, pos):
+    """
+    获取买档，pos=1表示买1
+    :param p_market_data:
+    :param pos:
+    :return:
+    """
+    bid_count = get_bid_count(p_market_data)
+    if pos <= 0 or pos > bid_count:
+        return None
+    p = p_market_data + sizeof(DepthMarketDataNField) + sizeof(DepthField) * (pos - 1)
+    return cast(p, POINTER(DepthField)).contents
+
+
+def get_ask(p_market_data, pos):
+    """
+    获取卖档，pos=1表示卖1
+    :param p_market_data:
+    :param pos:
+    :return:
+    """
+    ask_count = get_ask_count(p_market_data)
+    if pos <= 0 or pos > ask_count:
+        return None
+    p = p_market_data + sizeof(DepthMarketDataNField) + sizeof(DepthField) * (
+        get_bid_count(p_market_data) + pos - 1)
+    return cast(p, POINTER(DepthField)).contents
+
+
+def get_all_bids(p_market_data):
+    """
+    获取所有买档数据
+    :param p_market_data:
+    :return:
+    """
+    total = get_bid_count(p_market_data)
+    bids = []
+    for i in range(0, total):
+        p = p_market_data + sizeof(DepthMarketDataNField) + sizeof(DepthField) * i
+        bids.append(cast(p, POINTER(DepthField)).contents)
+    return bids
+
+
+def get_all_asks(p_market_data):
+    """
+    获取所有卖档数据
+    :param p_market_data:
+    :return:
+    """
+    bid_count = get_bid_count(p_market_data)
+    total = get_ask_count(p_market_data) + bid_count
+    asks = []
+    for i in range(bid_count, total):
+        p = p_market_data + sizeof(DepthMarketDataNField) + sizeof(DepthField) * i
+        asks.append(cast(p, POINTER(DepthField)).contents)
+    return asks
